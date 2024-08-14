@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.post("/signup", signup);
 router.post("/login", login);
-router.get("/me", verifyToken, getMe);  // Protected route to get user details
+router.get("/me", verifyToken, getMe);
 
 module.exports = router;

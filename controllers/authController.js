@@ -59,11 +59,12 @@ exports.login = (req, res) => {
   });
 };
 
-
 exports.getMe = (req, res) => {
-  const userId = req.user.id; // `req.user` is added by the `verifyToken` middleware
-  
-  const query = `SELECT id, username, email FROM users WHERE id = ?`;
+  const userId = req.user.id;
+
+  const query = `SELECT id , username, email FROM users WHERE id = ?
+  `;
+
   db.query(query, [userId], (err, results) => {
     if (err) {
       return res.status(500).json({ message: "Server error" });
@@ -71,7 +72,6 @@ exports.getMe = (req, res) => {
     if (results.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
-
     res.status(200).json({ user: results[0] });
   });
 };
