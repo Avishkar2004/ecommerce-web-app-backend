@@ -35,7 +35,6 @@ exports.signup = (req, res) => {
 };
 exports.login = (req, res) => {
   const { identifier, password } = req.body;
-  console.log(req.body);
   const query = `SELECT * FROM users WHERE email = ? OR username = ?`;
   db.query(query, [identifier, identifier], (err, results) => {
     if (err) {
@@ -64,7 +63,7 @@ exports.login = (req, res) => {
       try {
         await sendEmail(
           user.email,
-          "Login Successful",
+          user.username,
           "You have successfully logged in."
         );
         res.status(200).json({
