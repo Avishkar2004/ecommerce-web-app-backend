@@ -33,11 +33,9 @@ exports.signup = (req, res) => {
     });
   });
 };
-
 exports.login = (req, res) => {
   const { identifier, password } = req.body;
   console.log(req.body);
-
   const query = `SELECT * FROM users WHERE email = ? OR username = ?`;
   db.query(query, [identifier, identifier], (err, results) => {
     if (err) {
