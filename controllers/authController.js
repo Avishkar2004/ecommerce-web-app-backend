@@ -1,28 +1,41 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
+const sendEmail = require("../utils/mailer");
 
 exports.signup = (req, res) => {
   const { username, email, password } = req.body;
   console.log(req.body);
-  // Hash the password
+
   bcrypt.hash(password, 10, (err, hashedPassword) => {
     if (err) {
       return res.status(500).json({ message: "Server error" });
     }
 
     const query = `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`;
-    db.query(query, [username, email, hashedPassword], (err, result) => {
+    db.query(query, [username, email, hashedPassword], async (err, result) => {
       if (err) {
         return res.status(400).json({ message: "Error during signup" });
       }
-      res.status(201).json({ message: "User registered successfully" });
+
+      try {
+        await sendEmail(
+          email,
+          "Signup Successful",
+          "Welcome! You have successfully signed up."
+        );
+        res.status(201).json({ message: "User registered successfully" });
+      } catch (emailError) {
+        res
+          .status(500)
+          .json({ message: "Signup successful, but failed to send email." });
+      }
     });
   });
 };
 
 exports.login = (req, res) => {
-  const { identifier, password } = req.body; // 'identifier' can be either email or username
+  const { identifier, password } = req.body;
   console.log(req.body);
 
   const query = `SELECT * FROM users WHERE email = ? OR username = ?`;
@@ -31,30 +44,41 @@ exports.login = (req, res) => {
       return res.status(500).json({ message: "Server error" });
     }
     if (results.length === 0) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Email or username not found" });
     }
 
     const user = results[0];
 
-    // Compare the password
-    bcrypt.compare(password, user.password, (err, isMatch) => {
+    bcrypt.compare(password, user.password, async (err, isMatch) => {
       if (err) {
         return res.status(500).json({ message: "Server error" });
       }
       if (!isMatch) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ message: "Incorrect password" });
       }
 
-      // Generate a token
       const token = jwt.sign(
         { id: user.id, email: user.email },
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
       );
 
-      res
-        .status(200)
-        .json({ message: "Login successful", token, username: user.username });
+      try {
+        await sendEmail(
+          user.email,
+          "Login Successful",
+          "You have successfully logged in."
+        );
+        res.status(200).json({
+          message: "Login successful",
+          token,
+          username: user.username,
+        });
+      } catch (emailError) {
+        res
+          .status(500)
+          .json({ message: "Login successful, but failed to send email." });
+      }
     });
   });
 };
