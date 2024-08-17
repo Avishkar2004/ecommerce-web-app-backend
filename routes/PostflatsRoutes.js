@@ -1,18 +1,17 @@
-// routes/flatsRoutes.js
 const express = require("express");
 const multer = require("multer");
-const path = require("path");
 const db = require("../config/db");
-
 const router = express.Router();
 
-// Setup multer for file uploads
-const upload = multer({ dest: "uploads/" });
+// Setup multer for file uploads (in memory storage)
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // POST route to handle form submission
 router.post("/", upload.single("photos"), (req, res) => {
   console.log("Form Data:", req.body);
   console.log("File Data:", req.file);
+
   const {
     size,
     rent,
@@ -26,7 +25,8 @@ router.post("/", upload.single("photos"), (req, res) => {
     landmark,
     numberOfPeople,
   } = req.body;
-  const photos = req.file ? req.file.path : null; // Handle file upload
+
+  const photos = req.file ? req.file.buffer : null; // Handle file upload as binary data
 
   // Insert into database
   const query = `INSERT INTO flats (size, rent, light_bill, deposits, brokerage, photos, location, contact_number, email, contact_time, landmark, number_of_people) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
