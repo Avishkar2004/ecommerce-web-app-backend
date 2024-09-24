@@ -5,7 +5,7 @@ const sendEmail = require("../utils/mailer");
 
 exports.signup = (req, res) => {
   const { username, email, password } = req.body;
-  console.log(req.body);
+  // console.log("User data :", req.body.length , req.body);
 
   bcrypt.hash(password, 10, (err, hashedPassword) => {
     if (err) {
