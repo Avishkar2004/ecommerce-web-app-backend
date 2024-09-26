@@ -15,6 +15,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/flats", flatsRoutes);
 app.use("/api", GetflatRoutes);
 
+app.get("/", (req, res) => {
+  res.end("Hello word");
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

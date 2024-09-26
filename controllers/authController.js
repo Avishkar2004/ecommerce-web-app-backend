@@ -5,7 +5,7 @@ const sendEmail = require("../utils/mailer");
 
 exports.signup = (req, res) => {
   const { username, email, password } = req.body;
-  // console.log("User data :", req.body.length , req.body);
+  console.log("User data :", req.body);
 
   bcrypt.hash(password, 10, (err, hashedPassword) => {
     if (err) {
@@ -33,6 +33,9 @@ exports.signup = (req, res) => {
     });
   });
 };
+
+
+
 exports.login = (req, res) => {
   const { identifier, password } = req.body;
   const query = `SELECT * FROM users WHERE email = ? OR username = ?`;
