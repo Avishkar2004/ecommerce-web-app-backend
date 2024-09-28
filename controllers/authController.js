@@ -5,7 +5,7 @@ const sendEmail = require("../utils/mailer");
 
 exports.signup = (req, res) => {
   const { username, email, password } = req.body;
-  console.log("User data :", req.body);
+  console.log(req.body);
 
   bcrypt.hash(password, 10, (err, hashedPassword) => {
     if (err) {
@@ -18,13 +18,25 @@ exports.signup = (req, res) => {
         return res.status(400).json({ message: "Error during signup" });
       }
 
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: result.insertId, email: email },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
       try {
         await sendEmail(
           email,
           "Signup Successful",
           "Welcome! You have successfully signed up."
         );
-        res.status(201).json({ message: "User registered successfully" });
+        // Return token and user information
+        res.status(201).json({
+          message: "User registered successfully",
+          token,
+          user: { username, email },
+        });
       } catch (emailError) {
         res
           .status(500)
@@ -34,10 +46,9 @@ exports.signup = (req, res) => {
   });
 };
 
-
-
 exports.login = (req, res) => {
   const { identifier, password } = req.body;
+  console.log(req.body);
   const query = `SELECT * FROM users WHERE email = ? OR username = ?`;
   db.query(query, [identifier, identifier], (err, results) => {
     if (err) {
@@ -65,6 +76,7 @@ exports.login = (req, res) => {
 
       try {
         await sendEmail(
+          "Login Successful",
           user.email,
           user.username,
           "You have successfully logged in."
@@ -72,7 +84,7 @@ exports.login = (req, res) => {
         res.status(200).json({
           message: "Login successful",
           token,
-          username: user.username,
+          user: { username: user.username, email: user.email },
         });
       } catch (emailError) {
         res
@@ -84,11 +96,9 @@ exports.login = (req, res) => {
 };
 
 exports.getMe = (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user.id; // Should be set by JWT middleware
 
-  const query = `SELECT id , username, email FROM users WHERE id = ?
-  `;
-
+  const query = `SELECT id, username, email FROM users WHERE id = ?`;
   db.query(query, [userId], (err, results) => {
     if (err) {
       return res.status(500).json({ message: "Server error" });
