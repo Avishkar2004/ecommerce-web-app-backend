@@ -158,3 +158,76 @@ exports.checkAvailability = (req, res) => {
     res.status(200).json({ message: "Available" });
   });
 };
+
+//! Generate a 6-digit OTP
+
+const generateOTP = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
+
+exports.requestPasswordReset = (req, res) => {
+  const { email } = req.body;
+  const query = `SELECT * FROM users WHERE email = ?`;
+
+  db.query(query, [email], async (err, results) => {
+    if (err) return res.status(500).json({ message: "Server error" });
+    if (results.length === 0)
+      return res.status(404).json({ message: "User not found" });
+
+    const user = results[0];
+
+    //Generate OTP and expiry time
+    const otp = generateOTP();
+    const expiryTime = Date.now() + 15 * 60 * 1000; //OTP Valid for 15 Minute
+
+    //Store OTP and Expiry in the database
+    const updateQuery = `UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?`;
+    db.query(updateQuery, [otp, expiryTime, user.id], async (err) => {
+      if (err) return res.status(500).json({ message: "Server error" });
+
+      // Send OTP Vai email
+
+      try {
+        await sendEmail(email, user.username, otp, "reset");
+        res.status(200).json({ message: "OTP sent successfully" });
+      } catch (emailError) {
+        console.error("Failed to send OTP email:", emailError);
+        res.status(500).json({ message: "Failed to send OTP email" });
+      }
+    });
+  });
+};
+
+// Reset Password - verify OTP and Update password
+
+exports.resetPassword = (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  const query = `SELECT * FROM users WHERE email = ?`;
+
+  db.query(query, [email], async (err, results) => {
+    if (err) return res.status(500).json({ message: "Server error" });
+    if (results.length === 0)
+      return res.status(404).json({ message: "user not found" });
+
+    const user = results[0];
+
+    // Check if OTP is valid
+    if (user.reset_token !== otp || user.reset_token_expiry < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    //Hash the new password
+
+    bcrypt.hash(newPassword, 10, (err, hashedPassword) => {
+      if (err) return res.status(500).json({ message: "Server error" });
+
+      //Update the user's password and clear the reset token
+      const updateQuery = `UPDATE users SET password= ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?`;
+      db.query(updateQuery, [hashedPassword, user.id], (err) => {
+        if (err)
+          return res.status(500).json({ message: "Failed to reset password" });
+
+        res.status(200).json({ message: "Password reset successfully" });
+      });
+    });
+  });
+};
